@@ -84,19 +84,7 @@ agent 会自动初始化项目、体检环境、按验收范围装好需要的�
 
 - Python 3.9+（仅用标准库，无第三方运行时依赖）
 - Git
-
-## 支持的项目类型
-
-工具本身零依赖，对**目标项目**的语言/框架分两档：
-
-| 档位 | 项目标志 | 行为 |
-|---|---|---|
-| **开箱即用** | Maven（`pom.xml`）、Node.js/npm（`package.json`） | 内置测试文件模板与执行命令，直接生成可运行的测试 |
-| **通用（generic）** | `go.mod`、`pyproject.toml`、`setup.py`、`requirements.txt`、`build.gradle(.kts)`、`Cargo.toml`、`composer.json`、`Gemfile`、`CMakeLists.txt` | 能跑完整流程；测试文件和执行命令由 AI 按项目实际工具链填写，脚本不硬造 |
-
-两档的**执行证据链、质量门禁、假通过检测完全一致**——generic 项目里「声称通过但没有可执行命令」同样会被门禁拦下。
-
-目标项目自身的运行时（JDK、Node、Python、Go 等版本）由你的项目决定，工具不做版本校验。
+- 目标项目：Maven / Node.js 开箱即用；其他类型（Python、Go、Gradle 等）也能跑，测试命令由 AI 按项目工具链填写
 
 ## 遇到问题
 
