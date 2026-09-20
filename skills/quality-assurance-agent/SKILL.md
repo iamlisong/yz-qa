@@ -149,9 +149,10 @@ json，原始 manifest 只列路径——判断「上一轮走到哪、缺什么
 
 18. 调用 `qa-test-script-generator`。
 19. 把已确认用例转为 spec-task（`.qa-agent/current/test-spec-tasks.json`）。
-20. **脚本层走完整测试金字塔**（`generate-spec-tasks` 默认行为，不带 `--acceptance-mode`）：每条用例按单元/集成/API/E2E 逐级递减拆解（P0 拆最多、P3 最少）。不区分「开发/验收模式」——验收同样要有单元测试。
+20. **脚本层走完整测试金字塔**（`generate-spec-tasks` 默认行为）：每条用例按单元/集成/API/E2E 逐级递减拆解（P0 拆最多、P3 最少）。验收同样要有单元测试——不要把任何一层砍成 0。
 21. 运行 `coverage-balance --strict` 校验 task 覆盖率。
 22. 为每个 task 生成对应的测试文件（bash 脚本、API 调用、或 Playwright E2E 用例）。
+    - **generic 项目**（非 Maven/npm，如 Python、Go、Gradle）：task 带 `needsManualCommand: true`、`command`/`targetFile` 为空——你要按项目实际工具链写测试文件、填入可执行的 `command`（如 `pytest tests/test_x.py::test_y -q`、`go test ./... -run TestX`）和 `targetFile`。执行与门禁照常校验真实性，空 `command` 的「通过」会被 `assert-completion` 判为假通过。
 
 ### 阶段 4：执行与修复
 

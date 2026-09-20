@@ -3043,6 +3043,9 @@ def target_project_for_task(case: dict[str, Any], layer: str, repo: Path | None 
 
 
 def target_file_for_task(case: dict[str, Any], layer: str, target_project: str, task_index: int, project_kind: str = "maven") -> str:
+    # generic 项目不硬造测试文件路径，交由上游（AI）按项目实际约定填写
+    if project_kind == "generic":
+        return ""
     slug = spec_slug(str(case.get("module") or case.get("title") or case.get("id")))
     is_maven = project_kind == "maven"
     if layer == "unit":
@@ -3065,6 +3068,9 @@ def target_file_for_task(case: dict[str, Any], layer: str, target_project: str, 
 
 
 def command_for_spec_task(layer: str, target_project: str, target_file: str, project_kind: str = "maven") -> str:
+    # generic 项目不硬造执行命令，交由上游（AI）按项目实际工具链填写；执行/门禁仍照常校验真实性
+    if project_kind == "generic":
+        return ""
     is_maven = project_kind == "maven"
     # 显式覆盖 pom.xml 的 skipTests/maven.test.skip，避免「命令 exit 0 但 0 测试执行」的假通过
     if layer == "unit":
@@ -3205,8 +3211,9 @@ def build_spec_task(case: dict[str, Any], layer: str, focus: dict[str, str], ind
     target_project = _project_display_name(project, repo)
     project_kind = getattr(project, "kind", "maven")
     target_file = target_file_for_task(case, layer, target_project, index, project_kind)
+    command = command_for_spec_task(layer, target_project, target_file, project_kind)
     title = f"{case.get('title', case_id)} - {focus['title']}"
-    return {
+    task: dict[str, Any] = {
         "id": f"SPEC-{case_id}-{layer_code}-{index:03d}",
         "sourceCaseId": case_id,
         "priority": case.get("priority", "P2"),
@@ -3226,11 +3233,15 @@ def build_spec_task(case: dict[str, Any], layer: str, focus: dict[str, str], ind
         "traceability": _case_risk_ids(case),
         "implementationStatus": "pending",
         "executionStatus": "not-run",
-        "command": command_for_spec_task(layer, target_project, target_file, project_kind),
+        "command": command,
         "oracle": oracle_for_spec_task(case, layer, focus["kind"]),
         "evidence": [],
         "notes": [],
     }
+    # generic 项目：脚本不硬造路径/命令，标记要求上游（AI）在实现阶段填入 command/targetFile
+    if project_kind == "generic":
+        task["needsManualCommand"] = True
+    return task
 
 
 def generate_spec_tasks_data(
@@ -3253,7 +3264,7 @@ def generate_spec_tasks_data(
         priority = str(case.get("priority", "P2")).upper()
         minimum = spec_task_minimum(priority, min_specs_override)
         layers = distribute_spec_task_layers(minimum, ratio, max_e2e=max_e2e_per_case)
-        # For requiresE2E cases in acceptance mode, always add an e2e task
+        # requiresE2E 的用例即使 e2e 被配比挤掉，也强制补一个 e2e task
         requires_e2e = bool(case.get("requiresE2E"))
         if requires_e2e and "e2e" not in layers:
             layers = list(layers) + ["e2e"]
@@ -3298,18 +3309,12 @@ def generate_spec_tasks_data(
 def generate_spec_tasks(args: argparse.Namespace) -> None:
     cases_path = Path(args.cases).resolve()
     repo = Path(args.repo).resolve() if args.repo else None
-    generation_profile = "development"
-    if getattr(args, "acceptance_mode", False):
-        args.ratio = "unit=0,integration=0,api=1,e2e=0"
-        args.min_specs_by_priority = "P0=1,P1=1,P2=1,P3=1"
-        generation_profile = "acceptance"
     ratio = parse_ratio(args.ratio)
     data = generate_spec_tasks_data(
         read_json(cases_path),
         repo=repo,
         ratio=ratio,
         min_specs_override=args.min_specs_by_priority,
-        generation_profile=generation_profile,
         max_e2e_per_case=args.max_e2e_per_case,
     )
     output = Path(args.output).resolve()
@@ -4258,6 +4263,16 @@ def assert_completion_data(
                 findings.append({"type": "passed-task-missing-mapping", "severity": "fail", **status_pair})
             if not has_meaningful_evidence(task):
                 findings.append({"type": "passed-task-missing-evidence", "severity": "fail", **status_pair})
+            # generic 项目的 task 由上游（AI）填 command。声称通过却没有可执行命令＝假通过：
+            # 执行层不可能跑一条空命令还得到 passed。这里给出明确指引，而不是让空命令
+            # 在执行阶段变成含糊失败。
+            if not str(task.get("command", "")).strip():
+                findings.append({
+                    "type": "generic-command-missing",
+                    "severity": "fail",
+                    "message": "task 声称已通过但 command 为空；generic 项目必须由实现阶段填入可执行的测试命令",
+                    **status_pair,
+                })
         elif execution_status == "failed":
             counters["failed"] += 1
             if not has_required_task_mapping(task):
@@ -10745,7 +10760,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ratio", default="unit=0.60,integration=0.20,api=0.15,e2e=0.05")
     p.add_argument("--min-specs-by-priority", default="P0=8,P1=5,P2=3,P3=1")
     p.add_argument("--max-e2e-per-case", type=int, default=2)
-    p.add_argument("--acceptance-mode", action="store_true", help="验收模式：每条 confirmed 用例 1:1 映射一个 api 层 spec-task，不强制拆解为 unit/integration/e2e 混合体")
     p.set_defaults(func=generate_spec_tasks)
 
     p = sub.add_parser("coverage-balance", help="validate spec task pyramid ratio and per-case task counts")

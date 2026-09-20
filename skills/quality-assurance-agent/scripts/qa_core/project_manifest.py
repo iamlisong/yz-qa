@@ -34,7 +34,23 @@ class ProjectDiscoveryError(Exception):
 class ProjectInfo:
     name: str
     root: Path
-    kind: str  # "maven" | "npm"
+    kind: str  # "maven" | "npm" | "generic"
+
+
+# 除 pom.xml/package.json 外的项目标志文件。命中任一即认定为一个 generic 项目：
+# 流程能跑通，但测试文件路径与执行命令不由脚本硬造，交由上游（AI）按项目实际填写。
+_GENERIC_PROJECT_MARKERS = (
+    "go.mod",
+    "pyproject.toml",
+    "setup.py",
+    "requirements.txt",
+    "build.gradle",
+    "build.gradle.kts",
+    "Cargo.toml",
+    "composer.json",
+    "Gemfile",
+    "CMakeLists.txt",
+)
 
 
 def _read_maven_artifact_id(pom_path: Path) -> str | None:
@@ -96,6 +112,10 @@ def _scan_repo_for_projects(repo: Path) -> list[ProjectInfo]:
             name = _read_npm_name(package_json)
             if name and directory.resolve() not in seen_roots:
                 found.append(ProjectInfo(name=name, root=directory.resolve(), kind="npm"))
+                seen_roots.add(directory.resolve())
+        elif any((directory / marker).exists() for marker in _GENERIC_PROJECT_MARKERS):
+            if directory.resolve() not in seen_roots:
+                found.append(ProjectInfo(name=directory.name, root=directory.resolve(), kind="generic"))
                 seen_roots.add(directory.resolve())
         try:
             children = sorted(p for p in directory.iterdir() if p.is_dir())
@@ -186,6 +206,7 @@ def resolve_target_project(
 
     maven_projects = [p for p in projects if p.kind == "maven"]
     npm_projects = [p for p in projects if p.kind == "npm"]
+    generic_projects = [p for p in projects if p.kind == "generic"]
 
     if layer in {"api", "integration"}:
         for project in maven_projects:
@@ -203,5 +224,11 @@ def resolve_target_project(
         for project in preferred_order:
             if _matches_text(project):
                 return project
+        if preferred_order:
+            return preferred_order[0]
 
+    # 无 maven/npm 项目时，generic 兜底（先按 case 文本命中，再取第一个）
+    for project in generic_projects:
+        if _matches_text(project):
+            return project
     return projects[0]

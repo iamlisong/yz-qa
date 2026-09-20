@@ -93,7 +93,8 @@ def test_spec_task_root_has_generation_metadata(qa, tmp_path):
     assert "targetRatio" in result, "missing targetRatio"
 
 
-def test_acceptance_mode_generates_api_task_plus_e2e_for_requires_e2e_risk(qa, tmp_path):
+def test_requires_e2e_case_forces_e2e_task_when_ratio_excludes_it(qa, tmp_path):
+    """即使配比把 e2e 挤成 0，requiresE2E=True 的用例也必须强制补一个 e2e task。"""
     write(
         tmp_path / "demo-backend" / "pom.xml",
         "<project><artifactId>demo-backend</artifactId></project>",
@@ -103,14 +104,26 @@ def test_acceptance_mode_generates_api_task_plus_e2e_for_requires_e2e_risk(qa, t
     result = qa.generate_spec_tasks_data(
         cases,
         repo=tmp_path,
-        generation_profile="acceptance",
         min_specs_override="P0=1,P1=1,P2=1",
-        ratio={"unit": 0, "integration": 0, "api": 1, "e2e": 0},
+        ratio={"unit": 1, "integration": 0, "api": 0, "e2e": 0},
     )
 
     layers = [t["layer"] for t in result["tasks"]]
-    assert "api" in layers, "acceptance mode must include an api task"
-    assert "e2e" in layers, "requiresE2E=True must always produce at least one e2e task even in acceptance mode"
+    assert "e2e" in layers, "requiresE2E=True 必须强制产出至少一个 e2e task，即使配比里 e2e=0"
+
+
+def test_default_pyramid_generates_unit_tasks(qa, tmp_path):
+    """默认配比（不再有 acceptance-mode 开关）必须生成 unit task，而不是只出 api。"""
+    write(
+        tmp_path / "demo-backend" / "pom.xml",
+        "<project><artifactId>demo-backend</artifactId></project>",
+    )
+    cases = _minimal_cases([_minimal_case(priority="P0")])
+    result = qa.generate_spec_tasks_data(cases, repo=tmp_path)
+
+    layers = [t["layer"] for t in result["tasks"]]
+    assert "unit" in layers, "默认金字塔必须包含 unit task"
+    assert result["generationProfile"] == "development"
 
 
 def test_spec_task_db_oracle_contains_table_hint_from_case_data(qa, tmp_path):

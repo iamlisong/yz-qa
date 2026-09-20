@@ -31,7 +31,7 @@ description: >
 
 ## 生成层级约定
 
-脚本层走**完整测试金字塔**（`generate-spec-tasks` 默认行为，不带 `--acceptance-mode`）：每条用例按「单元 > 集成 > API > E2E」逐级递减拆解。不区分「开发/验收模式」——验收同样要有单元测试（测资金计算、状态机、校验逻辑等白盒行为）。
+脚本层走**完整测试金字塔**（`generate-spec-tasks` 默认行为）：每条用例按「单元 > 集成 > API > E2E」逐级递减拆解。验收同样要有单元测试（测资金计算、状态机、校验逻辑等白盒行为）——不要把任何一层砍成 0。
 
 默认最小 task 数：P0=8、P1=5、P2=3、P3=1；默认比例 unit 60% / integration 20% / api 15% / e2e 5%。纯后端 scope（无前端 UI）自动跳过 E2E。
 
@@ -110,7 +110,7 @@ python "$QA_AGENT_DIR/scripts/qa_agent.py"assert-script-implementation --spec-t
 
 - DB oracle 必须含具体查询对象和期望，不允许「核心状态一致」这类泛化文字。
 - 数据完整性用例（如概率表 gap 校验）生成 `verificationMode: direct-db` 的 task，oracle.db 必须非空。
-- `requiresE2E=true` 的风险，即使 acceptance-mode 也必须生成至少一个 e2e task。
+- `requiresE2E=true` 的风险，即使配比里 e2e 被挤成 0，也必须强制补生成至少一个 e2e task。
 
 ## E2E 层输出约定
 

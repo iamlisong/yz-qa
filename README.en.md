@@ -82,7 +82,19 @@ Both are configured in [docs/configuration.md](docs/configuration.md).
 
 - Python 3.9+ (stdlib only — no third-party runtime dependencies)
 - Git
-- Java 21 / Maven or Node.js 20+ in the target project, depending on scope
+
+## Supported project types
+
+The tool itself has zero dependencies. Support for the **target project** comes in two tiers:
+
+| Tier | Project marker | Behavior |
+|---|---|---|
+| **Built-in** | Maven (`pom.xml`), Node.js/npm (`package.json`) | Built-in test-file templates and run commands; generates runnable tests directly |
+| **Generic** | `go.mod`, `pyproject.toml`, `setup.py`, `requirements.txt`, `build.gradle(.kts)`, `Cargo.toml`, `composer.json`, `Gemfile`, `CMakeLists.txt` | Runs the full pipeline; test files and run commands are filled in by the AI per the project's actual toolchain — the script never fabricates them |
+
+Both tiers share the **same execution evidence chain, quality gates, and false-pass detection** — in a generic project, "claims passed but has no executable command" is still blocked by the gate.
+
+The target project's own runtime (JDK, Node, Python, Go, etc. versions) is up to your project; the tool does not enforce versions.
 
 ## Troubleshooting
 

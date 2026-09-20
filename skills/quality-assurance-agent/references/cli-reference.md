@@ -79,9 +79,11 @@ python "$QA_AGENT_DIR/scripts/qa_agent.py"coverage-balance --spec-tasks .qa-age
 python "$QA_AGENT_DIR/scripts/qa_agent.py"assert-oracle-mapping --risk-analysis .qa-agent/current/risk-analysis.json --spec-tasks .qa-agent/current/test-spec-tasks.json
 ```
 
-默认最小 task 数 P0=8/P1=5/P2=3/P3=1、比例 unit 60%/integration 20%/api 15%/e2e 5%。`--acceptance-mode` 是「仅 api 层」的遗留选项（等价 `--ratio unit=0,integration=0,api=1,e2e=0`），不再作为默认使用。
+默认最小 task 数 P0=8/P1=5/P2=3/P3=1、比例 unit 60%/integration 20%/api 15%/e2e 5%。若要收窄范围，用 `--min-specs-by-priority` 降低每优先级最小任务数、或用 `--ratio` 调整层级配比，但不要把某一层砍成 0——验收同样需要单元测试。
 
 `coverage-balance` 的 `--ratio` / `--min-specs-by-priority` 默认读 spec-tasks 根级的 `targetRatio` / `minSpecsByPriority`，无需手动传等价参数。
+
+**非 Maven/npm 项目（Python、Go、Gradle 等）**：识别为 `generic`，生成的 task 带 `needsManualCommand: true`、`command`/`targetFile` 为空——实现阶段由 AI 按项目实际工具链填入可执行的测试命令。执行、证据链、假通过检测照常生效：`assert-completion` 会拦截「声称通过但 command 为空」的假通过（`generic-command-missing`）。
 
 `assert-oracle-mapping` 校验每条 P0/P1 风险的 requiredAssertions 都映射到某个 spec-task 的 oracle/assertions。
 

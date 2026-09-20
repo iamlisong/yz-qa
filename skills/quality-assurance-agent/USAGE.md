@@ -312,17 +312,12 @@ python "$QA_AGENT_DIR/scripts/qa_agent.py"check-mojibake .qa-agent/current/*.js
 Start-Process -FilePath “mvn.cmd” -ArgumentList “spring-boot:run” -RedirectStandardOutput “backend.out.log” -RedirectStandardError “backend.err.log” -WindowStyle Hidden
 ```
 
-### generate-spec-tasks 默认最小任务数对验收场景不适用
+### generate-spec-tasks 任务数偏多
 
-**现象**：执行 `generate-spec-tasks` 后，每条 P0 用例被拆成 8 个 unit+integration+api+e2e 任务（共 40+ 任务），但验收场景只需每条用例 1 个 api 层任务。
+**现象**：执行 `generate-spec-tasks` 后，每条 P0 用例按测试金字塔被拆成多个 unit/integration/api/e2e 任务。
 
-**解决**：使用 `--acceptance-mode`：
+**说明**：这是设计行为——验收同样要有单元测试（资金计算、状态机、校验逻辑等白盒行为）。若确需收窄范围，用 `--min-specs-by-priority` 降低每优先级最小任务数，或用 `--ratio` 调整层级配比，而不是砍掉某一层。
 
-```powershell
-python "$QA_AGENT_DIR/scripts/qa_agent.py"generate-spec-tasks --cases .qa-agent/current/test-cases.json --repo . --output .qa-agent/current/test-spec-tasks.json --acceptance-mode
-```
-
-等价于 `--min-specs-by-priority P0=1,P1=1,P2=1,P3=1 --ratio unit=0,integration=0,api=1,e2e=0`。
 
 ## 9. 可移植性说明
 

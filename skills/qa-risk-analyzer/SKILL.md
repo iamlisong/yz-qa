@@ -71,7 +71,7 @@ python "$QA_AGENT_DIR/scripts/qa_agent.py"show-knowledge --repo . --module <mod
 - 给 `requiredAssertions` 填具体的可验证断言（例如"最新 t_user_usd_balance_log 记录的 change_amount 绝对值等于 totalDeducted"而不只是"金额计算正确"）
 - 把工具的 `affectedFiles` 从 160 个无关文件裁剪为真正相关的 5-10 个代码文件
 - 给 `coverageStatus` 标注真实状态（"missing" 如果没有任何已有用例覆盖，"partial" 如果有部分覆盖）
-- 对前端交互类风险（`suggestedTestLayers` 含 e2e，或 affectedFiles 含 `.tsx/.vue/.html`）标注 `requiresE2E: true`——这会强制 script-generator 即使 acceptance-mode 也生成 e2e task，UI 行为断言不会被降级成 api 层
+- 对前端交互类风险（`suggestedTestLayers` 含 e2e，或 affectedFiles 含 `.tsx/.vue/.html`）标注 `requiresE2E: true`——这会强制 script-generator 即使配比里 e2e 被挤成 0 也生成 e2e task，UI 行为断言不会被降级成 api 层
 - **`category` 只用固定枚举**（收敛，不随意新增）：`permission-boundary | money-reward-settlement | state-transition | async-callback-retry | data-consistency | negative-path | concurrency | provably-fair | business-rule | privacy`。中文随枚举定义在报告渲染层，你不需要（也不应该）自己造新类别——新风险归类到最接近的既有枚举，确有全新类别才和工具链维护者协商新增枚举。
 
 ### 6. 写 coverageGaps 和 requiredOracles
