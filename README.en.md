@@ -82,7 +82,8 @@ Both are configured in [docs/configuration.md](docs/configuration.md).
 
 - Python 3.9+ (stdlib only — no third-party runtime dependencies)
 - Git
-- Target project: Maven / Node.js work out of the box; other types (Python, Go, Gradle, etc.) also run, with test commands filled in by the AI per the project's toolchain
+- Target project: Maven or Node.js/npm; other types are accommodated by the AI during execution
+- E2E tests are Playwright-based and cover the Web; iOS / Android clients are planned for future support
 
 ## Troubleshooting
 
